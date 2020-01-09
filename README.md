@@ -1,0 +1,2 @@
+# spell
+SymDel spell corrector
