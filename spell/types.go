@@ -1,6 +1,8 @@
 package spell
 
 
+type EditAction uint32
+
 const (
 	Insert        EditAction = 0
 	Delete        EditAction = 1
@@ -28,6 +30,12 @@ type OperationAffectedChange struct {
 	InputLens map[int]bool
 }
 
+type EditorialPrescription struct {
+	Froms []rune
+	Tos []rune
+	Actions []EditAction
+}
+
 type Suggestion struct {
 	Term         string
 	Distance     int
@@ -35,12 +43,18 @@ type Suggestion struct {
 	Prescription *EditorialPrescription
 }
 
-var OperationsAffects = map[EditAction]int{
-	Insert: 0,
-	Delete: 1,
-	Replace: 1,
-	Transposition: 2,
-	Duplicate: 0,
-	MissDouble: 1,
-	Triplet: 3,
+type Misspell struct {
+	Term      string
+	Misspells []string
+}
+
+type LearningData struct {
+	Term        string
+	Misspell    string
+	Suggestions []Suggestion
+}
+
+type Scorer interface {
+	GetDifference(prescription *EditorialPrescription) float64
+	Learn(learningData []LearningData)
 }

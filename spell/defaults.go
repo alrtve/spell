@@ -25,4 +25,3 @@ var CheckOperationWeight = append([]OperationWeight{{
 }}, OperationWeights...)
 
 var MinSpanningLen = 3.0
-

@@ -31,6 +31,11 @@ func InitModel() *Model {
 	return &model
 }
 
+func (model *Model) HasTerm(term string) bool {
+	_, ok := model.TermsDict[strings.ToLower(term)]
+	return ok
+}
+
 func (model *Model) Train(terms []string)  {
 	for _, term := range terms {
 		termLo := strings.ToLower(term)
@@ -118,7 +123,7 @@ func (model *Model) Train(terms []string)  {
 	}
 }
 
-func (model *Model) GetSuggestions(input string, calcEditorialPrescription bool) map[string]Suggestion {
+func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bool) map[string]Suggestion {
 	result := make(map[string]Suggestion)
 	input = strings.ToLower(input)
 	var (
@@ -199,6 +204,9 @@ func (model *Model) GetSuggestions(input string, calcEditorialPrescription bool)
 	}
 
 	return result
+}
+
+func (model *Model) Learn(misspell []Misspell) {
 }
 
 func GetMultiEdits(term string, usedWeight float64, maxWeight float64) map[string]float64{
