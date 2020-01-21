@@ -29,7 +29,7 @@ type SimpleVectorizer struct {
 
 func (maker *SimpleVectorizer) Vectorize(prescription *spell.EditorialPrescription) *Vector {
 	inequality := InitVector(16)
-	for i := 0; i < len(prescription.Actions);  {
+	for i := 0; i < len(prescription.Actions); {
 		action := prescription.Actions[i]
 		from := prescription.Froms[i]
 		to := prescription.Tos[i]
@@ -43,15 +43,15 @@ func (maker *SimpleVectorizer) Vectorize(prescription *spell.EditorialPrescripti
 					inequality.Xs[RConsonant] += 1
 				} else {
 					qwertyDistance := maker.qwertyDistance(from, to)
-					if qwertyDistance >= 0{
+					if qwertyDistance >= 0 {
 						switch true {
-						case qwertyDistance <= 1 + eps:
+						case qwertyDistance <= 1+eps:
 							inequality.Xs[RDistance1] += 1
-						case qwertyDistance <= 2 + eps:
+						case qwertyDistance <= 2+eps:
 							inequality.Xs[RDistance2] += 1
-						case qwertyDistance <= 3 + eps:
+						case qwertyDistance <= 3+eps:
 							inequality.Xs[RDistance3] += 1
-						case qwertyDistance <= 4 + eps:
+						case qwertyDistance <= 4+eps:
 							inequality.Xs[RDistance4] += 1
 						default:
 							inequality.Xs[RDistanceOther] += 1
@@ -63,7 +63,7 @@ func (maker *SimpleVectorizer) Vectorize(prescription *spell.EditorialPrescripti
 			switch true {
 			case i == 0:
 				inequality.Xs[DFirst] += 1
-			case i == len(prescription.Actions) - 1:
+			case i == len(prescription.Actions)-1:
 				inequality.Xs[DLast] += 1
 			default:
 				inequality.Xs[DMiddle] += 1
@@ -92,10 +92,7 @@ func (maker *SimpleVectorizer) Vectorize(prescription *spell.EditorialPrescripti
 	return inequality
 }
 
-
-
-
-func (maker *SimpleVectorizer) consonantDistance(from, to rune) float64{
+func (maker *SimpleVectorizer) consonantDistance(from, to rune) float64 {
 	var sounds = [][]rune{
 		{'d', 't'},
 		{'u', 'y'},
@@ -117,13 +114,12 @@ func (maker *SimpleVectorizer) consonantDistance(from, to rune) float64{
 	return -1
 }
 
-
 func (maker *SimpleVectorizer) qwertyDistance(from, to rune) float64 {
 	locationFrom, locationFromExists := distances[from]
 	locationTo, locationToExists := distances[from]
 
 	if locationFromExists && locationToExists {
-		return math.Abs(locationTo.X - locationFrom.X) + math.Abs(locationTo.Y - locationFrom.Y)
+		return math.Abs(locationTo.X-locationFrom.X) + math.Abs(locationTo.Y-locationFrom.Y)
 	}
 	return -1
 }
@@ -141,48 +137,46 @@ var (
 
 var distances = map[rune]KeyLocation{
 	// number row
-	'0': KeyLocation{0,0},
-	'1': KeyLocation{1,0},
-	'2': KeyLocation{2,0},
-	'3': KeyLocation{3,0},
-	'4': KeyLocation{4,0},
-	'5': KeyLocation{5,0},
-	'6': KeyLocation{6,0},
-	'7': KeyLocation{7,0},
-	'8': KeyLocation{8,0},
-	'9': KeyLocation{9,0},
+	'0': KeyLocation{0, 0},
+	'1': KeyLocation{1, 0},
+	'2': KeyLocation{2, 0},
+	'3': KeyLocation{3, 0},
+	'4': KeyLocation{4, 0},
+	'5': KeyLocation{5, 0},
+	'6': KeyLocation{6, 0},
+	'7': KeyLocation{7, 0},
+	'8': KeyLocation{8, 0},
+	'9': KeyLocation{9, 0},
 
 	// first row
-	'q': KeyLocation{0 + offset1,1},
-	'w': KeyLocation{1 + offset1,1},
-	'e': KeyLocation{2 + offset1,1},
-	'r': KeyLocation{3 + offset1,1},
-	't': KeyLocation{4 + offset1,1},
-	'y': KeyLocation{5 + offset1,1},
-	'u': KeyLocation{6 + offset1,1},
-	'i': KeyLocation{7 + offset1,1},
-	'o': KeyLocation{8 + offset1,1},
-	'p': KeyLocation{9 + offset1,1},
+	'q': KeyLocation{0 + offset1, 1},
+	'w': KeyLocation{1 + offset1, 1},
+	'e': KeyLocation{2 + offset1, 1},
+	'r': KeyLocation{3 + offset1, 1},
+	't': KeyLocation{4 + offset1, 1},
+	'y': KeyLocation{5 + offset1, 1},
+	'u': KeyLocation{6 + offset1, 1},
+	'i': KeyLocation{7 + offset1, 1},
+	'o': KeyLocation{8 + offset1, 1},
+	'p': KeyLocation{9 + offset1, 1},
 
 	// second row
-	'a': KeyLocation{0 + offset2,2},
-	's': KeyLocation{1 + offset2,2},
-	'd': KeyLocation{2 + offset2,2},
-	'f': KeyLocation{3 + offset2,2},
-	'g': KeyLocation{4 + offset2,2},
-	'h': KeyLocation{5 + offset2,2},
-	'j': KeyLocation{6 + offset2,2},
-	'k': KeyLocation{7 + offset2,2},
-	'l': KeyLocation{8 + offset2,2},
+	'a': KeyLocation{0 + offset2, 2},
+	's': KeyLocation{1 + offset2, 2},
+	'd': KeyLocation{2 + offset2, 2},
+	'f': KeyLocation{3 + offset2, 2},
+	'g': KeyLocation{4 + offset2, 2},
+	'h': KeyLocation{5 + offset2, 2},
+	'j': KeyLocation{6 + offset2, 2},
+	'k': KeyLocation{7 + offset2, 2},
+	'l': KeyLocation{8 + offset2, 2},
 
 	// third row
-	'z': KeyLocation{0 + offset3,3},
-	'x': KeyLocation{1 + offset3,3},
-	'c': KeyLocation{2 + offset3,3},
-	'v': KeyLocation{3 + offset3,3},
-	'b': KeyLocation{4 + offset3,3},
-	'n': KeyLocation{5 + offset3,3},
-	'm': KeyLocation{6 + offset3,3},
+	'z': KeyLocation{0 + offset3, 3},
+	'x': KeyLocation{1 + offset3, 3},
+	'c': KeyLocation{2 + offset3, 3},
+	'v': KeyLocation{3 + offset3, 3},
+	'b': KeyLocation{4 + offset3, 3},
+	'n': KeyLocation{5 + offset3, 3},
+	'm': KeyLocation{6 + offset3, 3},
 }
-
-

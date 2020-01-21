@@ -4,7 +4,7 @@ var OperationWeights = []OperationWeight{
 	{
 		1,
 		0.8,
-		[]int{0,-1},
+		[]int{0, -1},
 	},
 	{
 		2,

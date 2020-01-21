@@ -7,7 +7,6 @@ type DistanceMeasurer struct {
 	maxColumns int
 }
 
-
 func NewDistanceMeasurer() *DistanceMeasurer {
 	return &DistanceMeasurer{}
 }
@@ -35,37 +34,37 @@ func (measurer *DistanceMeasurer) Distance(a, b string, calcEditorialPrescriptio
 	}
 	for i := 1; i < lb; i++ {
 		for j := 1; j < la; j++ {
-			del := measurer.p[i][j - 1] + 1
-			ins := measurer.p[i - 1][j] + 1
-			repl := measurer.p[i - 1][j - 1] + 1
+			del := measurer.p[i][j-1] + 1
+			ins := measurer.p[i-1][j] + 1
+			repl := measurer.p[i-1][j-1] + 1
 			match := maxDistance
-			if br[i - 1] == ar[j - 1] {
-				match = measurer.p[i - 1][j - 1]
+			if br[i-1] == ar[j-1] {
+				match = measurer.p[i-1][j-1]
 			}
 
 			transpose := maxDistance
 			if i >= 2 && j >= 2 {
-				if br[i - 1] == ar[j - 2] && br[i - 2] == ar[j - 1] {
-					transpose = measurer.p[i - 2][j - 2] + 1
+				if br[i-1] == ar[j-2] && br[i-2] == ar[j-1] {
+					transpose = measurer.p[i-2][j-2] + 1
 				}
 			}
 
 			doupl := maxDistance
-			if i >= 2 && ar[j - 1] == br[i - 1] && ar[j - 1] == br[i - 2] {
-				doupl = measurer.p[i - 1][j] + 1
+			if i >= 2 && ar[j-1] == br[i-1] && ar[j-1] == br[i-2] {
+				doupl = measurer.p[i-1][j] + 1
 			}
 			missDoupl := maxDistance
-			if j >= 2 && ar[j - 1] == br[i - 1] && ar[j - 2] == br[i - 1] {
-				missDoupl = measurer.p[i][j - 1] + 1
+			if j >= 2 && ar[j-1] == br[i-1] && ar[j-2] == br[i-1] {
+				missDoupl = measurer.p[i][j-1] + 1
 			}
 
 			triplet := maxDistance
 			// for triplets chars must be pairwise different
-			if i >= 3 && j >= 3 && a[j - 3] != a[j - 2] && a[j - 3] != a[j - 1] && a[j - 2] != a[j - 1] {
-				if ar[j - 3] == br[i - 1] && ar[j - 2] == br[i - 3] && ar[j - 1] == br[i - 2] {
-					triplet = measurer.p[i - 3][j - 3] + 1
-				} else if ar[j - 3] == br[i - 2] && ar[j - 2] == br[i - 1] && ar[j - 1] == br[i - 3] {
-					triplet = measurer.p[i - 3][j - 3] + 1
+			if i >= 3 && j >= 3 && a[j-3] != a[j-2] && a[j-3] != a[j-1] && a[j-2] != a[j-1] {
+				if ar[j-3] == br[i-1] && ar[j-2] == br[i-3] && ar[j-1] == br[i-2] {
+					triplet = measurer.p[i-3][j-3] + 1
+				} else if ar[j-3] == br[i-2] && ar[j-2] == br[i-1] && ar[j-1] == br[i-3] {
+					triplet = measurer.p[i-3][j-3] + 1
 				}
 			}
 
@@ -104,7 +103,7 @@ func (measurer *DistanceMeasurer) Distance(a, b string, calcEditorialPrescriptio
 			measurer.e[i][j] = action
 		}
 	}
-	distance = measurer.p[lb - 1][la - 1]
+	distance = measurer.p[lb-1][la-1]
 	if calcEditorialPrescription {
 		editorialPrescription = measurer.getEditorialPrescription(ar, br, la, lb)
 	}
@@ -113,14 +112,14 @@ func (measurer *DistanceMeasurer) Distance(a, b string, calcEditorialPrescriptio
 
 func (measurer *DistanceMeasurer) getEditorialPrescription(ar, br []rune, la, lb int) *EditorialPrescription {
 	var (
-		i = lb - 1
-		j = la - 1
+		i  = lb - 1
+		j  = la - 1
 		ia = i + j
 	)
 	var (
 		actions = make([]EditAction, ia)
-		froms = make([]rune, ia)
-		tos = make([]rune, ia)
+		froms   = make([]rune, ia)
+		tos     = make([]rune, ia)
 	)
 	ia--
 	for i > 0 || j > 0 {
@@ -133,40 +132,40 @@ func (measurer *DistanceMeasurer) getEditorialPrescription(ar, br []rune, la, lb
 		case Delete:
 			fallthrough
 		case MissDouble:
-			froms[ia] = ar[j - 1]
+			froms[ia] = ar[j-1]
 			j--
 		case Insert:
 			fallthrough
 		case Duplicate:
-			tos[ia] = br[i - 1]
+			tos[ia] = br[i-1]
 			i--
 		case Match:
 			fallthrough
 		case Replace:
-			froms[ia] = ar[j - 1]
-			tos[ia] = br[i - 1]
+			froms[ia] = ar[j-1]
+			tos[ia] = br[i-1]
 			i--
 			j--
 		case Transposition:
-			froms[ia] = ar[j - 1]
-			froms[ia - 1] = ar[j - 2]
-			tos[ia] = br[i - 1]
-			tos[ia - 1] = br[i - 2]
+			froms[ia] = ar[j-1]
+			froms[ia-1] = ar[j-2]
+			tos[ia] = br[i-1]
+			tos[ia-1] = br[i-2]
 
-			actions[ia - 1] = Transposition
+			actions[ia-1] = Transposition
 			ia -= 1
 			i -= 2
 			j -= 2
 		case Triplet:
-			froms[ia] = ar[j - 1]
-			froms[ia - 1] = ar[j - 2]
-			froms[ia - 2] = ar[j - 3]
-			tos[ia] = br[i - 1]
-			tos[ia - 1] = br[i - 2]
-			tos[ia - 2] = br[i - 3]
+			froms[ia] = ar[j-1]
+			froms[ia-1] = ar[j-2]
+			froms[ia-2] = ar[j-3]
+			tos[ia] = br[i-1]
+			tos[ia-1] = br[i-2]
+			tos[ia-2] = br[i-3]
 
-			actions[ia - 1] = Triplet
-			actions[ia - 2] = Triplet
+			actions[ia-1] = Triplet
+			actions[ia-2] = Triplet
 			ia -= 2
 			i -= 3
 			j -= 3
@@ -178,10 +177,10 @@ func (measurer *DistanceMeasurer) getEditorialPrescription(ar, br []rune, la, lb
 	tos = tos[ia:]
 	actions = actions[ia:]
 
-	return &EditorialPrescription {
-		Froms:froms,
-		Tos:tos,
-		Actions:actions,
+	return &EditorialPrescription{
+		Froms:   froms,
+		Tos:     tos,
+		Actions: actions,
 	}
 }
 
@@ -197,5 +196,3 @@ func (measurer *DistanceMeasurer) ensureSizes(la, lb int) {
 		measurer.maxColumns = la
 	}
 }
-
-

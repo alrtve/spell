@@ -37,4 +37,3 @@ func (prescription *EditorialPrescription) Dump() {
 	}
 	fmt.Println()
 }
-

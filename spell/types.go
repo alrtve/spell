@@ -1,6 +1,5 @@
 package spell
 
-
 type EditAction uint32
 
 const (
@@ -15,24 +14,24 @@ const (
 )
 
 type OperationWeight struct {
-	AffectedLen int
-	Weight float64
+	AffectedLen  int
+	Weight       float64
 	MisspellLens []int
 }
 
 type EditVariance struct {
-	MinTermLen int
+	MinTermLen    int
 	PossibleEdits [][]EditAction
 }
 
 type OperationAffectedChange struct {
-	Weight float64
+	Weight    float64
 	InputLens map[int]bool
 }
 
 type EditorialPrescription struct {
-	Froms []rune
-	Tos []rune
+	Froms   []rune
+	Tos     []rune
 	Actions []EditAction
 }
 

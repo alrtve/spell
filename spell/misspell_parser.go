@@ -34,7 +34,7 @@ func (parser *MisspellParser) Parse(reader io.Reader) ([]Misspell, error) {
 				Misspells: make([]string, 4),
 			})
 		} else {
-			misspells[len(misspells) - 1].Misspells = append(misspells[len(misspells) - 1].Misspells, line)
+			misspells[len(misspells)-1].Misspells = append(misspells[len(misspells)-1].Misspells, line)
 		}
 	}
 

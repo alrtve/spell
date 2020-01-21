@@ -13,10 +13,8 @@ type Model struct {
 
 	Affects      [][][]int; // inputlen -> edit len -> term lens
 	KnownAffects []bool;
-
-	Depth  int
+	Depth int
 }
-
 
 func InitModel() *Model {
 	model := Model{
@@ -36,7 +34,7 @@ func (model *Model) HasTerm(term string) bool {
 	return ok
 }
 
-func (model *Model) Train(terms []string)  {
+func (model *Model) Train(terms []string) {
 	for _, term := range terms {
 		termLo := strings.ToLower(term)
 		if _, ok := model.TermsDict[termLo]; ok {
@@ -85,7 +83,7 @@ func (model *Model) Train(terms []string)  {
 		}
 		if !model.KnownAffects[termI] {
 			trackingMultiEdits := GetTrackingMultiEdits(termLo, OperationAffectedChange{0, map[int]bool{}}, float64(model.Depth))
-			for edit, trackingEdit := range trackingMultiEdits	{
+			for edit, trackingEdit := range trackingMultiEdits {
 				editLen := len(edit)
 				for inputDiff := range trackingEdit.InputLens {
 					inputLen := termLen + inputDiff
@@ -94,31 +92,31 @@ func (model *Model) Train(terms []string)  {
 						copy(affects, model.Affects)
 						model.Affects = affects
 					}
-					inputAffects := model.Affects[inputLen - 1]
+					inputAffects := model.Affects[inputLen-1]
 					if inputAffects == nil {
 						inputAffects = make([][]int, termLen)
-						model.Affects[inputLen - 1] = inputAffects
+						model.Affects[inputLen-1] = inputAffects
 					} else if editLen > len(inputAffects) {
 						inputAffectsCp := make([][]int, editLen)
 						copy(inputAffectsCp, inputAffects)
 						inputAffects = inputAffectsCp
-						model.Affects[inputLen - 1] = inputAffectsCp
+						model.Affects[inputLen-1] = inputAffectsCp
 					}
 
-					termsLens := model.Affects[inputLen - 1][editLen - 1]
+					termsLens := model.Affects[inputLen-1][editLen-1]
 					if termsLens == nil {
 						termsLens = make([]int, 0, 10)
-						model.Affects[inputLen - 1][editLen - 1] = termsLens
+						model.Affects[inputLen-1][editLen-1] = termsLens
 					}
 					index := sort.SearchInts(termsLens, termI)
 					if index == len(termsLens) || termsLens[index] != termI {
 						termsLens := append([]int{termI}, termsLens...)
 						sort.Ints(termsLens)
-						model.Affects[inputLen - 1][editLen - 1] = termsLens
+						model.Affects[inputLen-1][editLen-1] = termsLens
 					}
 				}
 			}
-			model.KnownAffects[termLen - 1] = true
+			model.KnownAffects[termLen-1] = true
 		}
 	}
 }
@@ -127,15 +125,15 @@ func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bo
 	result := make(map[string]Suggestion)
 	input = strings.ToLower(input)
 	var (
-		termsByLen [][]int
-		termsIndex []int
-		ok         = false
-		inputLen   = utf8.RuneCountInString(input)
-		editLen int
+		termsByLen   [][]int
+		termsIndex   []int
+		ok           = false
+		inputLen     = utf8.RuneCountInString(input)
+		editLen      int
 		inputAffects [][]int
-		editAffects []int
-		term string
-		measurer = NewDistanceMeasurer()
+		editAffects  []int
+		term         string
+		measurer     = NewDistanceMeasurer()
 	)
 
 	// todo add min input len check
@@ -143,23 +141,20 @@ func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bo
 	// exact match
 	if _, ok := model.TermsDict[input]; ok {
 		result[input] = Suggestion{
-			Term:input,
-			Distance:0,
-			Score:0,
+			Term:     input,
+			Distance: 0,
+			Score:    0,
 		}
 	}
-
 
 	// Index doesn't have any term that can be potentially mathed to input
 	if inputLen > len(model.Affects) {
 		return result
 	}
-	inputAffects = model.Affects[inputLen - 1]
+	inputAffects = model.Affects[inputLen-1]
 	if inputAffects == nil {
 		return result
 	}
-
-
 
 	edits := GetMultiEdits(input, 0.0, float64(model.Depth))
 	for edit := range edits {
@@ -171,7 +166,7 @@ func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bo
 		if editLen > len(inputAffects) {
 			continue
 		}
-		editAffects = inputAffects[editLen - 1]
+		editAffects = inputAffects[editLen-1]
 		if editAffects == nil {
 			continue
 		}
@@ -209,7 +204,7 @@ func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bo
 func (model *Model) Learn(misspell []Misspell) {
 }
 
-func GetMultiEdits(term string, usedWeight float64, maxWeight float64) map[string]float64{
+func GetMultiEdits(term string, usedWeight float64, maxWeight float64) map[string]float64 {
 	edits := GetEdits(term, usedWeight, maxWeight)
 	if usedWeight < maxWeight {
 		traversalEdits := make(map[string]float64)
@@ -217,7 +212,7 @@ func GetMultiEdits(term string, usedWeight float64, maxWeight float64) map[strin
 			traversalEdits[k] = v
 		}
 		for term, weight := range traversalEdits {
-			subedits := GetMultiEdits(term, usedWeight + weight, maxWeight)
+			subedits := GetMultiEdits(term, usedWeight+weight, maxWeight)
 			for subterm, v := range subedits {
 				edits[subterm] = v
 			}
@@ -227,14 +222,14 @@ func GetMultiEdits(term string, usedWeight float64, maxWeight float64) map[strin
 }
 
 func GetEdits(term string, usedWeight float64, maxWeight float64) map[string]float64 {
-	result := make(map[string] float64)
+	result := make(map[string]float64)
 	termR := []rune(term)
 	lenF := float64(len(termR))
 	for _, operationWeight := range OperationWeights {
-		if lenF - operationWeight.Weight < MinSpanningLen {
+		if lenF-operationWeight.Weight < MinSpanningLen {
 			break
 		}
-		if usedWeight + operationWeight.Weight > maxWeight {
+		if usedWeight+operationWeight.Weight > maxWeight {
 			break
 		}
 		edit := string(termR[operationWeight.AffectedLen:])
@@ -243,7 +238,7 @@ func GetEdits(term string, usedWeight float64, maxWeight float64) map[string]flo
 		}
 		lenR := len(termR) - operationWeight.AffectedLen + 1
 		for i := 1; i < lenR; i++ {
-			edit := string(string(termR[0:i]) + string(termR[i + operationWeight.AffectedLen:]))
+			edit := string(string(termR[0:i]) + string(termR[i+operationWeight.AffectedLen:]))
 			if existingWeight, ok := result[edit]; !ok || existingWeight > operationWeight.Weight {
 				result[edit] = usedWeight + operationWeight.Weight
 			}
@@ -252,8 +247,7 @@ func GetEdits(term string, usedWeight float64, maxWeight float64) map[string]flo
 	return result;
 }
 
-
-func GetTrackingMultiEdits(term string, usedAffectedChange OperationAffectedChange, maxWeight float64) map[string]*OperationAffectedChange{
+func GetTrackingMultiEdits(term string, usedAffectedChange OperationAffectedChange, maxWeight float64) map[string]*OperationAffectedChange {
 	edits := GetTrackingEdits(term, usedAffectedChange, maxWeight)
 	if usedAffectedChange.Weight < maxWeight {
 		traversalEdits := make(map[string]*OperationAffectedChange)
@@ -262,7 +256,7 @@ func GetTrackingMultiEdits(term string, usedAffectedChange OperationAffectedChan
 		}
 		for term, affectedChange := range traversalEdits {
 			u := OperationAffectedChange{
-				Weight: usedAffectedChange.Weight + affectedChange.Weight,
+				Weight:    usedAffectedChange.Weight + affectedChange.Weight,
 				InputLens: map[int]bool{},
 			}
 			for l := range affectedChange.InputLens {
@@ -277,28 +271,27 @@ func GetTrackingMultiEdits(term string, usedAffectedChange OperationAffectedChan
 	return edits
 }
 
-
 func GetTrackingEdits(term string, usedAffectedChange OperationAffectedChange, maxWeight float64) map[string]*OperationAffectedChange {
-	result := make(map[string] *OperationAffectedChange)
+	result := make(map[string]*OperationAffectedChange)
 	termR := []rune(term)
 	lenF := float64(len(termR))
 	for _, operationWeight := range CheckOperationWeight {
-		if lenF - operationWeight.Weight < MinSpanningLen {
+		if lenF-operationWeight.Weight < MinSpanningLen {
 			break
 		}
-		if usedAffectedChange.Weight + operationWeight.Weight > maxWeight {
+		if usedAffectedChange.Weight+operationWeight.Weight > maxWeight {
 			break
 		}
 		edit := string(termR[operationWeight.AffectedLen:])
 		if existingWeight, ok := result[edit]; !ok {
 			existingWeight = &OperationAffectedChange{
-				Weight: usedAffectedChange.Weight + operationWeight.Weight,
+				Weight:    usedAffectedChange.Weight + operationWeight.Weight,
 				InputLens: map[int]bool{},
 			}
 			for _, l1 := range operationWeight.MisspellLens {
 				if len(usedAffectedChange.InputLens) > 0 {
-					for l2:= range usedAffectedChange.InputLens {
-						existingWeight.InputLens[l1 + l2] = true
+					for l2 := range usedAffectedChange.InputLens {
+						existingWeight.InputLens[l1+l2] = true
 					}
 				} else {
 					existingWeight.InputLens[l1] = true
@@ -308,16 +301,16 @@ func GetTrackingEdits(term string, usedAffectedChange OperationAffectedChange, m
 		}
 		lenR := len(termR) - operationWeight.AffectedLen + 1
 		for i := 1; i < lenR; i++ {
-			edit := string(string(termR[0:i]) + string(termR[i + operationWeight.AffectedLen:]))
+			edit := string(string(termR[0:i]) + string(termR[i+operationWeight.AffectedLen:]))
 			if existingWeight, ok := result[edit]; !ok {
 				existingWeight = &OperationAffectedChange{
-					Weight: usedAffectedChange.Weight + operationWeight.Weight,
+					Weight:    usedAffectedChange.Weight + operationWeight.Weight,
 					InputLens: map[int]bool{},
 				}
 				for _, l1 := range operationWeight.MisspellLens {
 					if len(usedAffectedChange.InputLens) > 0 {
 						for l2 := range usedAffectedChange.InputLens {
-							existingWeight.InputLens[l1 + l2] = true
+							existingWeight.InputLens[l1+l2] = true
 						}
 					} else {
 						existingWeight.InputLens[l1] = true

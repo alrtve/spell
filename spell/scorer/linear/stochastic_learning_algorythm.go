@@ -8,9 +8,9 @@ func (learner *StochasticLearningAlgorithm) Learn(vectorSystems []*VectorSystem)
 	if len(vectorSystems) > 0 && vectorSystems[0] != nil &&
 		len(vectorSystems[0].Vectors) > 0 && vectorSystems[0].Vectors[0] != nil {
 		var (
-			vector *Vector
-			tries = 10000
-			bestScore = 0
+			vector       *Vector
+			tries        = 10000
+			bestScore    = 0
 			currentScore = 0
 		)
 		for i := 0; i < tries; i++ {
@@ -28,5 +28,3 @@ func (learner *StochasticLearningAlgorithm) Learn(vectorSystems []*VectorSystem)
 	}
 	return bestVector
 }
-
-

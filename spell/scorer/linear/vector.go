@@ -27,7 +27,7 @@ func RandomVector(length int) *Vector {
 	return result
 }
 
-func (a *Vector) Len() int  {
+func (a *Vector) Len() int {
 	return len(a.Xs)
 }
 
@@ -41,7 +41,7 @@ func (a *Vector) Sub(b *Vector) *Vector {
 
 func (a *Vector) EqualTo(b *Vector) bool {
 	for i := range a.Xs {
-		if math.Abs(a.Xs[i] - b.Xs[i]) > eps {
+		if math.Abs(a.Xs[i]-b.Xs[i]) > eps {
 			return false
 		}
 	}
@@ -83,22 +83,19 @@ func (a *Vector) IsZero() bool {
 
 func (a *Vector) IsSimple() bool {
 	for _, val := range a.Xs {
-		if math.Abs(val) > 1 + eps {
+		if math.Abs(val) > 1+eps {
 			return false
 		}
 	}
 	return true
 }
 
-
-
-
 func (inequality *Vector) Dump() {
 	displayValues := make([]string, 0, 20)
 	for i, val := range inequality.Xs {
 		if math.Abs(val) > eps {
 			valStr := fmt.Sprintf("%0.1f*x%d", math.Abs(val), i)
-			if len(displayValues) > 0 || val < 0{
+			if len(displayValues) > 0 || val < 0 {
 				sign := "+"
 				if val < 0 {
 					sign = "-"
@@ -115,9 +112,8 @@ func (inequality *Vector) Dump() {
 	}
 }
 
-
 // goodness
-func (a *Vector)  Gn(vector *Vector) (float64, bool) {
+func (a *Vector) Gn(vector *Vector) (float64, bool) {
 	val := 0.0
 	significantCount := 0
 	minVal := 1.0
@@ -138,14 +134,13 @@ func (a *Vector)  Gn(vector *Vector) (float64, bool) {
 	if val > 0 {
 		return 1 / (1 + val/minVal), true
 	}
-	return 1 - val/ minVal / 5, true
+	return 1 - val/minVal/5, true
 }
 
-func (a *Vector) IsSatisfied(wights *Vector) bool  {
+func (a *Vector) IsSatisfied(wights *Vector) bool {
 	val := 0.0
-	for i := range a.Xs{
+	for i := range a.Xs {
 		val += wights.Xs[i] * a.Xs[i]
 	}
 	return val > 0
 }
-

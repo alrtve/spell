@@ -55,7 +55,7 @@ func (system *VectorSystem) Dump() {
 		for i, val := range inequality.Xs {
 			if math.Abs(val) > eps {
 				valStr := fmt.Sprintf("%0.1f*x%d", math.Abs(val), i)
-				if len(displayValues) > 0 || val < 0{
+				if len(displayValues) > 0 || val < 0 {
 					sign := "+"
 					if val < 0 {
 						sign = "-"
@@ -86,7 +86,7 @@ func (system *VectorSystem) Gn(vector *Vector) float64 {
 	return 2
 }
 
-func (system *VectorSystem) IsSatisfied(vector *Vector)  bool {
+func (system *VectorSystem) IsSatisfied(vector *Vector) bool {
 	for _, inequality := range system.Vectors {
 		if !inequality.IsSatisfied(vector) {
 			return false

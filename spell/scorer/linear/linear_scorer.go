@@ -7,7 +7,7 @@ import (
 type Scorer struct {
 	Weights    *Vector
 	Vectorizer SimpleVectorizer
-	Learner LearningAlgorithm
+	Learner    LearningAlgorithm
 }
 
 func (linear *Scorer) GetDifference(prescription *spell.EditorialPrescription) float64 {
@@ -19,23 +19,23 @@ func (linear *Scorer) GetDifference(prescription *spell.EditorialPrescription) f
 	return difference
 }
 
-func (scorer *Scorer) Learn(learningData []spell.LearningData)  {
+func (scorer *Scorer) Learn(learningData []spell.LearningData) {
 	byTerms := make(map[string][]spell.LearningData)
 	vectorSystems := make([]*VectorSystem, 8)
-	for _, learning := range learningData{
+	for _, learning := range learningData {
 		if _, ok := byTerms[learning.Term]; !ok {
 			byTerms[learning.Term] = make([]spell.LearningData, 4)
 		}
 		byTerms[learning.Term] = append(byTerms[learning.Term], learning)
 	}
 
-	for term, lernings := range byTerms{
+	for term, lernings := range byTerms {
 		for _, learning := range lernings {
 			var (
-				baseVector *Vector
+				baseVector   *Vector
 				vectorSystem *VectorSystem
 			)
-			for _, suggestion := range learning.Suggestions  {
+			for _, suggestion := range learning.Suggestions {
 				if suggestion.Term == term {
 					baseVector = scorer.Vectorizer.Vectorize(suggestion.Prescription)
 					break
@@ -43,7 +43,7 @@ func (scorer *Scorer) Learn(learningData []spell.LearningData)  {
 			}
 			if baseVector != nil {
 				vectorSystem = InitVectorSystem()
-				for _, suggestion := range learning.Suggestions  {
+				for _, suggestion := range learning.Suggestions {
 					if suggestion.Term != term {
 						vector := scorer.Vectorizer.Vectorize(suggestion.Prescription)
 						vector = vector.Sub(baseVector)
