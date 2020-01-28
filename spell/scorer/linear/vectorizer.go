@@ -24,10 +24,14 @@ const (
 	J              = 15
 )
 
-type SimpleVectorizer struct {
+type Vectoriser struct {
 }
 
-func (maker *SimpleVectorizer) Vectorize(prescription *spell.EditorialPrescription) *Vector {
+func InitVectoriser() *Vectoriser  {
+	return new (Vectoriser)
+}
+
+func (maker *Vectoriser) Vectorize(prescription *spell.EditorialPrescription) *Vector {
 	inequality := InitVector(16)
 	for i := 0; i < len(prescription.Actions); {
 		action := prescription.Actions[i]
@@ -92,7 +96,7 @@ func (maker *SimpleVectorizer) Vectorize(prescription *spell.EditorialPrescripti
 	return inequality
 }
 
-func (maker *SimpleVectorizer) consonantDistance(from, to rune) float64 {
+func (maker *Vectoriser) consonantDistance(from, to rune) float64 {
 	var sounds = [][]rune{
 		{'d', 't'},
 		{'u', 'y'},
@@ -114,7 +118,7 @@ func (maker *SimpleVectorizer) consonantDistance(from, to rune) float64 {
 	return -1
 }
 
-func (maker *SimpleVectorizer) qwertyDistance(from, to rune) float64 {
+func (maker *Vectoriser) qwertyDistance(from, to rune) float64 {
 	locationFrom, locationFromExists := distances[from]
 	locationTo, locationToExists := distances[from]
 

@@ -22,7 +22,7 @@ func InitVector(length int) *Vector {
 func RandomVector(length int) *Vector {
 	result := InitVector(length)
 	for i := range result.Xs {
-		result.Xs[i] = rand.Float64()
+		result.Xs[i] = 0.25 * (3 + rand.Float64())
 	}
 	return result
 }

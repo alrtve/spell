@@ -14,6 +14,8 @@ type Model struct {
 	Affects      [][][]int; // inputlen -> edit len -> term lens
 	KnownAffects []bool;
 	Depth int
+
+	scorer Scorer
 }
 
 func InitModel() *Model {
@@ -32,6 +34,10 @@ func InitModel() *Model {
 func (model *Model) HasTerm(term string) bool {
 	_, ok := model.TermsDict[strings.ToLower(term)]
 	return ok
+}
+
+func (model *Model) SetScorer(scorer Scorer)  {
+	model.scorer = scorer
 }
 
 func (model *Model) Train(terms []string) {
@@ -201,7 +207,42 @@ func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bo
 	return result
 }
 
-func (model *Model) Learn(misspell []Misspell) {
+func (model *Model) GetSuggestions(input string, scoreModel ScoreModel, calcEditorialPrescription bool) []Suggestion  {
+	var rawSuggestions = model.GetRawSuggestions(input, calcEditorialPrescription)
+	suggestions := make([]Suggestion, 0, len(rawSuggestions))
+	for _, suggestion := range rawSuggestions {
+		suggestions = append(suggestions, suggestion)
+	}
+	sort.Slice(suggestions, func(i, j int) bool {
+		if scoreModel.Compare(&suggestions[i], &suggestions[j]) < 0 {
+			return true
+		}
+		return false
+	})
+	return suggestions
+}
+
+func (model *Model) Learn(misspells []Misspell) {
+	learningData := make([]LearningTerm, 0, 4 * len(misspells))
+	for _, misspell := range misspells {
+		if !model.HasTerm(misspell.Term) {
+			continue
+		}
+		for _, misspelledTerm := range misspell.Misspells{
+			rawSuggesions := model.GetRawSuggestions(misspelledTerm, true)
+			suggestions := make([]Suggestion, 0, len(rawSuggesions))
+			for _, suggestion := range rawSuggesions {
+			    suggestions = append(suggestions, suggestion)
+			}
+			learning := LearningTerm{
+				Term:misspell.Term,
+				Misspell:misspelledTerm,
+				Suggestions:suggestions,
+			}
+			learningData = append(learningData, learning)
+		}
+	}
+	model.scorer.Learn(learningData)
 }
 
 func GetMultiEdits(term string, usedWeight float64, maxWeight float64) map[string]float64 {

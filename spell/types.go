@@ -47,7 +47,7 @@ type Misspell struct {
 	Misspells []string
 }
 
-type LearningData struct {
+type LearningTerm struct {
 	Term        string
 	Misspell    string
 	Suggestions []Suggestion
@@ -55,5 +55,13 @@ type LearningData struct {
 
 type Scorer interface {
 	GetDifference(prescription *EditorialPrescription) float64
-	Learn(learningData []LearningData)
+	Learn(learningData []LearningTerm)
+}
+
+type ScoreModel interface {
+	Compare(a *Suggestion, b *Suggestion) float64
+}
+
+type Learner interface {
+	Learn(learningData []*LearningTerm) ScoreModel
 }
