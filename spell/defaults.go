@@ -24,4 +24,7 @@ var CheckOperationWeight = append([]OperationWeight{{
 	[]int{1},
 }}, OperationWeights...)
 
-var MinSpanningLen = 3.0
+const (
+	DefaultMinSpanningLen = 3.0
+	DefaultIndexSplitLen  = 5
+)

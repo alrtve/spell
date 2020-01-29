@@ -10,22 +10,26 @@ type Model struct {
 	TermsDict map[string]int
 	Terms     []string
 	Index     map[string][][]int
+	IndexTail map[string]map[string]bool
 
-	Affects      [][][]int; // inputlen -> edit len -> term lens
-	KnownAffects []bool;
+	Affects      [][][]int // inputlen -> edit len -> term lens
+	KnownAffects []bool
 	Depth int
+	IndexSplitLen int
 
 	scorer Scorer
 }
 
 func InitModel() *Model {
 	model := Model{
-		Terms:        []string{},
-		TermsDict:    map[string]int{},
-		Index:        map[string][][]int{},
-		Depth:        2,
-		Affects:      [][][]int{},
-		KnownAffects: make([]bool, 15),
+		Terms:         []string{},
+		TermsDict:     map[string]int{},
+		Index:         map[string][][]int{},
+		IndexTail:     map[string]map[string]bool{},
+		Depth:         2,
+		IndexSplitLen: DefaultIndexSplitLen,
+		Affects:       [][][]int{},
+		KnownAffects:  make([]bool, 15),
 	}
 
 	return &model
@@ -61,24 +65,36 @@ func (model *Model) Train(terms []string) {
 		edits := GetMultiEdits(termLo, 0.0, float64(model.Depth))
 
 		for edit := range edits {
-			if termsByLen, ok = model.Index[edit]; !ok {
+			editHead, editTail := model.splitEdit(edit)
+			if termsByLen, ok = model.Index[editHead]; !ok {
 				termsByLen = make([][]int, termLen)
-				model.Index[edit] = termsByLen
+				model.Index[editHead] = termsByLen
 			} else {
 				if termLen > len(termsByLen) {
-					model.Index[edit] = make([][]int, termLen)
-					copy(model.Index[edit], termsByLen)
-					termsByLen = model.Index[edit]
+					model.Index[editHead] = make([][]int, termLen)
+					copy(model.Index[editHead], termsByLen)
+					termsByLen = model.Index[editHead]
 				}
 			}
 
 			termsIndex = termsByLen[termI]
 			if termsIndex == nil {
-				termsIndex = []int{}
+				termsIndex = []int{termId}
 				termsByLen[termI] = termsIndex
+			} else if termsIndex[len(termsIndex) - 1] != termId {
+				termsIndex = append(termsIndex, termId)
 			}
-			termsIndex = append(termsIndex, termId)
 			termsByLen[termI] = termsIndex
+
+			// edit tail
+			if editTail != "" {
+				tailToHeads := model.IndexTail[editTail]
+				if tailToHeads == nil {
+					tailToHeads = make(map[string]bool)
+					model.IndexTail[editTail] = tailToHeads
+				}
+				tailToHeads[editHead] = true
+			}
 		}
 
 		// fill known affects
@@ -127,6 +143,22 @@ func (model *Model) Train(terms []string) {
 	}
 }
 
+func (model *Model) splitEdit(edit string) (string, string) {
+	var (
+		editR     = []rune(edit)
+		editRHead = editR
+
+		editHead = edit
+		editTail string
+	)
+	if len(editR) > model.IndexSplitLen {
+		editRHead = editR[:model.IndexSplitLen]
+		editHead = string(editRHead)
+		editTail = string(editR[model.IndexSplitLen:])
+	}
+	return editHead, editTail
+}
+
 func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bool) map[string]Suggestion {
 	result := make(map[string]Suggestion)
 	input = strings.ToLower(input)
@@ -164,7 +196,13 @@ func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bo
 
 	edits := GetMultiEdits(input, 0.0, float64(model.Depth))
 	for edit := range edits {
-		if termsByLen, ok = model.Index[edit]; !ok {
+		editHead, editTail := model.splitEdit(edit)
+
+		if termsByLen, ok = model.Index[editHead]; !ok {
+			continue
+		}
+
+		if editTail != ""  && (model.IndexTail[editTail] == nil || !model.IndexTail[editTail][editHead]) {
 			continue
 		}
 
@@ -267,7 +305,7 @@ func GetEdits(term string, usedWeight float64, maxWeight float64) map[string]flo
 	termR := []rune(term)
 	lenF := float64(len(termR))
 	for _, operationWeight := range OperationWeights {
-		if lenF-operationWeight.Weight < MinSpanningLen {
+		if lenF-operationWeight.Weight < DefaultMinSpanningLen {
 			break
 		}
 		if usedWeight+operationWeight.Weight > maxWeight {
@@ -317,7 +355,7 @@ func GetTrackingEdits(term string, usedAffectedChange OperationAffectedChange, m
 	termR := []rune(term)
 	lenF := float64(len(termR))
 	for _, operationWeight := range CheckOperationWeight {
-		if lenF-operationWeight.Weight < MinSpanningLen {
+		if lenF-operationWeight.Weight < DefaultMinSpanningLen {
 			break
 		}
 		if usedAffectedChange.Weight+operationWeight.Weight > maxWeight {
