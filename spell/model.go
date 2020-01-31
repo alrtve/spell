@@ -1,11 +1,15 @@
 package spell
 
 import (
+	"regexp"
 	"sort"
 	"strings"
 	"unicode/utf8"
 )
 
+/**
+	Model represents misspell corrector structure
+ */
 type Model struct {
 	TermsDict map[string]int
 	Terms     []string
@@ -16,6 +20,9 @@ type Model struct {
 	KnownAffects []bool
 	Depth int
 	IndexSplitLen int
+
+	TermsCounts []float32
+	TotalTerms  float32
 
 	scorer Scorer
 }
@@ -30,11 +37,16 @@ func InitModel() *Model {
 		IndexSplitLen: DefaultIndexSplitLen,
 		Affects:       [][][]int{},
 		KnownAffects:  make([]bool, 15),
+
+		TermsCounts:   make([]float32, 0),
 	}
 
 	return &model
 }
 
+/**
+	Has term been added to the model
+ */
 func (model *Model) HasTerm(term string) bool {
 	_, ok := model.TermsDict[strings.ToLower(term)]
 	return ok
@@ -44,121 +56,152 @@ func (model *Model) SetScorer(scorer Scorer)  {
 	model.scorer = scorer
 }
 
-func (model *Model) Train(terms []string) {
-	for _, term := range terms {
-		termLo := strings.ToLower(term)
-		if _, ok := model.TermsDict[termLo]; ok {
+/**
+	Parse text, split it to terms and add them to the model
+ */
+func (model *Model) TrainText(text []byte) {
+	var (
+		termsRegex = regexp.MustCompile(`(?m)[\p{L}-]+`)
+		rawTermsB = termsRegex.FindAll(text, -1)
+		terms = map[string]float32{}
+	)
+	for _, termB := range rawTermsB {
+		if utf8.RuneCount(termB) < DefaultMinTermLen {
 			continue
 		}
+		term := string(termB)
+		term = strings.ToLower(term)
+		terms[term] += 1
+	}
 
-		var (
-			termsByLen [][]int
-			termsIndex []int
-			ok         = false
-			termLen    = utf8.RuneCountInString(termLo)
-			termI      = termLen - 1
-			termId     = len(model.Terms)
-		)
-
-		model.Terms = append(model.Terms, termLo)
-		model.TermsDict[termLo] = termId
-		edits := GetMultiEdits(termLo, 0.0, float64(model.Depth))
-
-		for edit := range edits {
-			editHead, editTail := model.splitEdit(edit)
-			if termsByLen, ok = model.Index[editHead]; !ok {
-				termsByLen = make([][]int, termLen)
-				model.Index[editHead] = termsByLen
-			} else {
-				if termLen > len(termsByLen) {
-					model.Index[editHead] = make([][]int, termLen)
-					copy(model.Index[editHead], termsByLen)
-					termsByLen = model.Index[editHead]
-				}
-			}
-
-			termsIndex = termsByLen[termI]
-			if termsIndex == nil {
-				termsIndex = []int{termId}
-				termsByLen[termI] = termsIndex
-			} else if termsIndex[len(termsIndex) - 1] != termId {
-				termsIndex = append(termsIndex, termId)
-			}
-			termsByLen[termI] = termsIndex
-
-			// edit tail
-			if editTail != "" {
-				tailToHeads := model.IndexTail[editTail]
-				if tailToHeads == nil {
-					tailToHeads = make(map[string]bool)
-					model.IndexTail[editTail] = tailToHeads
-				}
-				tailToHeads[editHead] = true
-			}
-		}
-
-		// fill known affects
-		if termLen > len(model.KnownAffects) {
-			knownAffects := make([]bool, termLen)
-			copy(knownAffects, model.KnownAffects)
-			model.KnownAffects = knownAffects
-		}
-		if !model.KnownAffects[termI] {
-			trackingMultiEdits := GetTrackingMultiEdits(termLo, OperationAffectedChange{0, map[int]bool{}}, float64(model.Depth))
-			for edit, trackingEdit := range trackingMultiEdits {
-				editLen := len(edit)
-				for inputDiff := range trackingEdit.InputLens {
-					inputLen := termLen + inputDiff
-					if inputLen > len(model.Affects) {
-						affects := make([][][]int, inputLen)
-						copy(affects, model.Affects)
-						model.Affects = affects
-					}
-					inputAffects := model.Affects[inputLen-1]
-					if inputAffects == nil {
-						inputAffects = make([][]int, termLen)
-						model.Affects[inputLen-1] = inputAffects
-					} else if editLen > len(inputAffects) {
-						inputAffectsCp := make([][]int, editLen)
-						copy(inputAffectsCp, inputAffects)
-						inputAffects = inputAffectsCp
-						model.Affects[inputLen-1] = inputAffectsCp
-					}
-
-					termsLens := model.Affects[inputLen-1][editLen-1]
-					if termsLens == nil {
-						termsLens = make([]int, 0, 10)
-						model.Affects[inputLen-1][editLen-1] = termsLens
-					}
-					index := sort.SearchInts(termsLens, termI)
-					if index == len(termsLens) || termsLens[index] != termI {
-						termsLens := append([]int{termI}, termsLens...)
-						sort.Ints(termsLens)
-						model.Affects[inputLen-1][editLen-1] = termsLens
-					}
-				}
-			}
-			model.KnownAffects[termLen-1] = true
-		}
+	for term, count := range terms {
+		model.AddTerm(term, count)
 	}
 }
 
-func (model *Model) splitEdit(edit string) (string, string) {
+
+/**
+	Directly add terms to the model
+ */
+func (model *Model) TrainTerms(terms []string) {
+	for _, term := range terms {
+		model.AddTerm(term, 1)
+	}
+}
+
+/**
+	Add one term to the model
+ */
+func (model *Model) AddTerm(term string, count float32) bool {
 	var (
-		editR     = []rune(edit)
-		editRHead = editR
-
-		editHead = edit
-		editTail string
+		termLen    = utf8.RuneCountInString(term)
+		ok         = false
+		termId     = 0
+		termLo     = strings.ToLower(term)
 	)
-	if len(editR) > model.IndexSplitLen {
-		editRHead = editR[:model.IndexSplitLen]
-		editHead = string(editRHead)
-		editTail = string(editR[model.IndexSplitLen:])
+	if termLen < DefaultMinTermLen {
+		return false
 	}
-	return editHead, editTail
+
+	model.TotalTerms += count
+	if termId, ok = model.TermsDict[termLo]; ok {
+		model.TermsCounts[termId] += count
+		return true
+	}
+
+	var (
+		termsByLen [][]int
+		termsIndex []int
+		termI      = termLen - 1
+	)
+	termId = len(model.Terms)
+	model.Terms = append(model.Terms, termLo)
+	model.TermsCounts = append(model.TermsCounts, count)
+	model.TermsDict[termLo] = termId
+	edits := GetMultiEdits(termLo, 0.0, float64(model.Depth))
+
+	for edit := range edits {
+		editHead, editTail := model.splitEdit(edit)
+		if termsByLen, ok = model.Index[editHead]; !ok {
+			termsByLen = make([][]int, termLen)
+			model.Index[editHead] = termsByLen
+		} else {
+			if termLen > len(termsByLen) {
+				model.Index[editHead] = make([][]int, termLen)
+				copy(model.Index[editHead], termsByLen)
+				termsByLen = model.Index[editHead]
+			}
+		}
+
+		termsIndex = termsByLen[termI]
+		if termsIndex == nil {
+			termsIndex = []int{termId}
+			termsByLen[termI] = termsIndex
+		} else if termsIndex[len(termsIndex) - 1] != termId {
+			termsIndex = append(termsIndex, termId)
+		}
+		termsByLen[termI] = termsIndex
+
+		// edit tail
+		if editTail != "" {
+			tailToHeads := model.IndexTail[editTail]
+			if tailToHeads == nil {
+				tailToHeads = make(map[string]bool)
+				model.IndexTail[editTail] = tailToHeads
+			}
+			tailToHeads[editHead] = true
+		}
+	}
+
+	// fill known affects
+	if termLen > len(model.KnownAffects) {
+		knownAffects := make([]bool, termLen)
+		copy(knownAffects, model.KnownAffects)
+		model.KnownAffects = knownAffects
+	}
+	if !model.KnownAffects[termI] {
+		trackingMultiEdits := GetTrackingMultiEdits(termLo, OperationAffectedChange{0, map[int]bool{}}, float64(model.Depth))
+		for edit, trackingEdit := range trackingMultiEdits {
+			editLen := len(edit)
+			for inputDiff := range trackingEdit.InputLens {
+				inputLen := termLen + inputDiff
+				if inputLen > len(model.Affects) {
+					affects := make([][][]int, inputLen)
+					copy(affects, model.Affects)
+					model.Affects = affects
+				}
+				inputAffects := model.Affects[inputLen-1]
+				if inputAffects == nil {
+					inputAffects = make([][]int, termLen)
+					model.Affects[inputLen-1] = inputAffects
+				} else if editLen > len(inputAffects) {
+					inputAffectsCp := make([][]int, editLen)
+					copy(inputAffectsCp, inputAffects)
+					inputAffects = inputAffectsCp
+					model.Affects[inputLen-1] = inputAffectsCp
+				}
+
+				termsLens := model.Affects[inputLen-1][editLen-1]
+				if termsLens == nil {
+					termsLens = make([]int, 0, 10)
+					model.Affects[inputLen-1][editLen-1] = termsLens
+				}
+				index := sort.SearchInts(termsLens, termI)
+				if index == len(termsLens) || termsLens[index] != termI {
+					termsLens := append([]int{termI}, termsLens...)
+					sort.Ints(termsLens)
+					model.Affects[inputLen-1][editLen-1] = termsLens
+				}
+			}
+		}
+		model.KnownAffects[termLen-1] = true
+	}
+	return true
 }
 
+/**
+	Calculate raw unsorted suggestions
+ */
 func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bool) map[string]Suggestion {
 	result := make(map[string]Suggestion)
 	input = strings.ToLower(input)
@@ -245,6 +288,9 @@ func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bo
 	return result
 }
 
+/**
+	Return suggestions sorted by given scorer
+*/
 func (model *Model) GetSuggestions(input string, scoreModel ScoreModel, calcEditorialPrescription bool) []Suggestion  {
 	var rawSuggestions = model.GetRawSuggestions(input, calcEditorialPrescription)
 	suggestions := make([]Suggestion, 0, len(rawSuggestions))
@@ -258,6 +304,22 @@ func (model *Model) GetSuggestions(input string, scoreModel ScoreModel, calcEdit
 		return false
 	})
 	return suggestions
+}
+
+func (model *Model) splitEdit(edit string) (string, string) {
+	var (
+		editR     = []rune(edit)
+		editRHead = editR
+
+		editHead = edit
+		editTail string
+	)
+	if len(editR) > model.IndexSplitLen {
+		editRHead = editR[:model.IndexSplitLen]
+		editHead = string(editRHead)
+		editTail = string(editR[model.IndexSplitLen:])
+	}
+	return editHead, editTail
 }
 
 func (model *Model) Learn(misspells []Misspell) {
@@ -380,7 +442,7 @@ func GetTrackingEdits(term string, usedAffectedChange OperationAffectedChange, m
 		}
 		lenR := len(termR) - operationWeight.AffectedLen + 1
 		for i := 1; i < lenR; i++ {
-			edit := string(string(termR[0:i]) + string(termR[i+operationWeight.AffectedLen:]))
+			edit := string(termR[0:i]) + string(termR[i+operationWeight.AffectedLen:])
 			if existingWeight, ok := result[edit]; !ok {
 				existingWeight = &OperationAffectedChange{
 					Weight:    usedAffectedChange.Weight + operationWeight.Weight,

@@ -1,8 +1,15 @@
 package linear
 
 import (
+	"fmt"
 	"spell"
 )
+
+type vectorScore struct {
+	*Vector
+	score float64
+
+}
 
 type StochasticLearner struct {
 	*Vectoriser
@@ -17,34 +24,87 @@ func (learner *StochasticLearner) Learn(learningData []*spell.LearningTerm) spel
 		}
 	}
 
+	fmt.Println(len(vectorSystems))
 	var bestVector *Vector
 	if len(vectorSystems) > 0 && vectorSystems[0] != nil &&
 		len(vectorSystems[0].Vectors) > 0 && vectorSystems[0].Vectors[0] != nil {
 		var (
-			vector       *Vector
-			tries        = 10000
-			bestScore    = 0
+			vector               *Vector
+			tries                = 100
+			maxRelaxCount        = 10
+			relaxingCount        = 0
+			maxDirectSearchCount = 1000
+			bestScore            = 0
+			prevBestScore        = 0
 		)
+		tries_loop:
 		for i := 0; i < tries; i++ {
-			currentScore := 0
 			vector = RandomVector(vectorSystems[0].Vectors[0].Len())
-			for _, vectorSystem := range vectorSystems {
-				if vectorSystem.IsSatisfied(vector) {
-					currentScore += 1
+			currentScore := learner.score(vectorSystems, vector)
+			fmt.Println(i)
+			for k := 0; k < maxDirectSearchCount; k++ {
+				vVectors := vector.Variate(0, 1, 0.1)
+				valuableVectors := make([]vectorScore, 0, len(vVectors))
+				for _, v := range vVectors {
+					vScore := learner.score(vectorSystems, v)
+					if vScore > currentScore {
+						valuableVectors = append(valuableVectors, vectorScore{
+							Vector: v,
+							score:  float64(vScore),
+						})
+					}
+				}
+				if len(valuableVectors) > 0 {
+					maxScore := 0.0
+					for _, vs := range valuableVectors {
+						if vs.score > maxScore {
+							maxScore = vs.score
+						}
+					}
+					nextVector := vector.Clone()
+					for _, vs := range valuableVectors {
+						nextVector = nextVector.MoveToward(vs.Vector, vs.score / maxScore)
+					}
+					currentScore = learner.score(vectorSystems, nextVector)
+					vector = nextVector
+				} else {
+					break
+				}
+
+				fmt.Println(currentScore)
+				fmt.Println(bestScore)
+				fmt.Println("")
+				if currentScore > bestScore {
+					fmt.Println(bestScore)
+					bestScore = currentScore
+					bestVector = vector
 				}
 			}
-			if currentScore > bestScore {
-				bestScore = currentScore
-				bestVector = vector
-				//fmt.Println(currentScore)
-				//fmt.Println(vector.Xs)
+			if bestScore > prevBestScore {
+				relaxingCount = 0
+			} else {
+				relaxingCount++
+				if relaxingCount == maxRelaxCount {
+					break tries_loop
+				}
 			}
+			prevBestScore = bestScore
 		}
 	}
 	return &LinearScoreModel{
-		Weights:bestVector,
+		Weights:    bestVector,
 		Vectoriser: InitVectoriser(),
 	}
+}
+
+func (learner *StochasticLearner) score(vectorSystems []*VectorSystem, vector *Vector) int {
+	currentScore := 0
+	for _, vectorSystem := range vectorSystems {
+		if vectorSystem.IsSatisfied(vector) {
+			currentScore += 1
+		}
+	}
+	return currentScore
 }
 
 

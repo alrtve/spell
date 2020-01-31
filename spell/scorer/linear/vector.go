@@ -22,10 +22,11 @@ func InitVector(length int) *Vector {
 func RandomVector(length int) *Vector {
 	result := InitVector(length)
 	for i := range result.Xs {
-		result.Xs[i] = 0.25 * (3 + rand.Float64())
+		result.Xs[i] = rand.Float64()
 	}
 	return result
 }
+
 
 func (a *Vector) Len() int {
 	return len(a.Xs)
@@ -90,6 +91,43 @@ func (a *Vector) IsSimple() bool {
 	return true
 }
 
+func (a *Vector) Variate(min, max, d float64) []*Vector {
+	result := make([]*Vector, 0, 2 * len(a.Xs))
+	for i := range a.Xs {
+		v := a.Clone()
+		v.Xs[i] += d
+		if v.Xs[i] <= max {
+			result = append(result, v)
+		}
+		v = a.Clone()
+		v.Xs[i] -= d
+		if v.Xs[i] >= min {
+			result = append(result, v)
+		}
+	}
+	return result
+}
+
+func (a *Vector) CombineWith(vectors ...*Vector) *Vector {
+	result := a.Clone()
+	for i := range a.Xs {
+		d := 0.0
+		for _, v := range vectors {
+			d += v.Xs[i] - a.Xs[i]
+		}
+		result.Xs[i] = a.Xs[i] + d
+	}
+	return result
+}
+
+func (a *Vector) MoveToward(vector *Vector, l float64) *Vector{
+	result := a.Clone()
+	for i := range a.Xs {
+		result.Xs[i] += l * (vector.Xs[i] - a.Xs[i])
+	}
+	return result
+}
+
 func (inequality *Vector) Dump() {
 	displayValues := make([]string, 0, 20)
 	for i, val := range inequality.Xs {
@@ -143,4 +181,12 @@ func (a *Vector) IsSatisfied(wights *Vector) bool {
 		val += wights.Xs[i] * a.Xs[i]
 	}
 	return val > 0
+}
+
+func (a *Vector) Value(wights *Vector) float64 {
+	val := 0.0
+	for i := range a.Xs {
+		val += wights.Xs[i] * a.Xs[i]
+	}
+	return val
 }

@@ -27,4 +27,5 @@ var CheckOperationWeight = append([]OperationWeight{{
 const (
 	DefaultMinSpanningLen = 3.0
 	DefaultIndexSplitLen  = 5
+	DefaultMinTermLen = 4
 )
