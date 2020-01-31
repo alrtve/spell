@@ -1,4 +1,4 @@
-package linear
+package scorer
 
 import (
 	"fmt"
@@ -36,6 +36,14 @@ func (a *Vector) Sub(b *Vector) *Vector {
 	result := InitVector(len(a.Xs))
 	for i, xa := range a.Xs {
 		result.Xs[i] = xa - b.Xs[i]
+	}
+	return result
+}
+
+func (a *Vector) Add(b *Vector) *Vector {
+	result := InitVector(len(a.Xs))
+	for i, xa := range a.Xs {
+		result.Xs[i] = xa + b.Xs[i]
 	}
 	return result
 }

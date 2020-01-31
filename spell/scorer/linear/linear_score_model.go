@@ -1,13 +1,16 @@
 package linear
 
-import "spell"
+import (
+	"spell"
+	"spell/scorer"
+)
 
-type LinearScoreModel struct {
-	Weights *Vector
-	*Vectoriser
+type ScoreModel struct {
+	Weights *scorer.Vector
+	*scorer.Vectoriser
 }
 
-func (scoreModel *LinearScoreModel) Compare(a *spell.Suggestion, b *spell.Suggestion) float64 {
+func (scoreModel *ScoreModel) Compare(a *spell.Suggestion, b *spell.Suggestion) float64 {
 	largeValue := 100.0
 	if a.Prescription == nil {
 		return -largeValue
@@ -18,6 +21,8 @@ func (scoreModel *LinearScoreModel) Compare(a *spell.Suggestion, b *spell.Sugges
 
 	vectorA := scoreModel.Vectorize(a.Prescription)
 	vectorB := scoreModel.Vectorize(b.Prescription)
+	a.Score = vectorA.Value(scoreModel.Weights)
+	b.Score = vectorB.Value(scoreModel.Weights)
 	if vectorA.Sub(vectorB).IsSatisfied(scoreModel.Weights) {
 		return 1
 	}
@@ -25,8 +30,8 @@ func (scoreModel *LinearScoreModel) Compare(a *spell.Suggestion, b *spell.Sugges
 }
 
 
-func (scoreModel *LinearScoreModel) GetVectorSystem(a *spell.LearningTerm) *VectorSystem {
-	baseVector := (*Vector)(nil)
+func (scoreModel *ScoreModel) GetVectorSystem(a *spell.LearningTerm) *VectorSystem {
+	baseVector := (*scorer.Vector)(nil)
 	for _, suggestion := range a.Suggestions {
 		if suggestion.Term == a.Term {
 			baseVector = scoreModel.Vectorize(suggestion.Prescription)

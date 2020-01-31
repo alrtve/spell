@@ -3,25 +3,28 @@ package linear
 import (
 	"fmt"
 	"math"
+	"spell/scorer"
 	"strings"
 )
 
+var eps = 0.000001
+
 type VectorSystem struct {
-	Vectors []*Vector
+	Vectors []*scorer.Vector
 }
 
 func InitVectorSystem() *VectorSystem {
 	return &VectorSystem{
-		Vectors: make([]*Vector, 0),
+		Vectors: make([]*scorer.Vector, 0),
 	}
 }
 
-func (system *VectorSystem) Add(inequality *Vector) {
+func (system *VectorSystem) Add(inequality *scorer.Vector) {
 	system.Vectors = append(system.Vectors, inequality)
 }
 
 func (system *VectorSystem) Normalize() {
-	inequalities := make([]*Vector, 0, len(system.Vectors))
+	inequalities := make([]*scorer.Vector, 0, len(system.Vectors))
 	for _, inequality := range system.Vectors {
 		if inequality.IsZero() {
 			continue
@@ -73,7 +76,7 @@ func (system *VectorSystem) Dump() {
 	}
 }
 
-func (system *VectorSystem) Gn(vector *Vector) float64 {
+func (system *VectorSystem) Gn(vector *scorer.Vector) float64 {
 	min, resultApplicable := -1000.0, false
 	for i := 0; i < len(system.Vectors); i++ {
 		val, applicable := system.Vectors[i].Gn(vector)
@@ -86,7 +89,7 @@ func (system *VectorSystem) Gn(vector *Vector) float64 {
 	return 2
 }
 
-func (system *VectorSystem) IsSatisfied(vector *Vector) bool {
+func (system *VectorSystem) IsSatisfied(vector *scorer.Vector) bool {
 	for _, inequality := range system.Vectors {
 		if !inequality.IsSatisfied(vector) {
 			return false
@@ -95,7 +98,7 @@ func (system *VectorSystem) IsSatisfied(vector *Vector) bool {
 	return true
 }
 
-func (system *VectorSystem) Compare(a *Vector, b *Vector) int {
+func (system *VectorSystem) Compare(a *scorer.Vector, b *scorer.Vector) int {
 	result := 0.0
 	for i := 0; i < len(system.Vectors); i++ {
 		aVal, aApplicable := system.Vectors[i].Gn(a)

@@ -39,6 +39,7 @@ type Suggestion struct {
 	Term         string
 	Distance     int
 	Score        float64
+	Count        float64
 	Prescription *EditorialPrescription
 }
 

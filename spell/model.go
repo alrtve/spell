@@ -21,8 +21,8 @@ type Model struct {
 	Depth int
 	IndexSplitLen int
 
-	TermsCounts []float32
-	TotalTerms  float32
+	TermsCounts []float64
+	TotalTerms  float64
 
 	scorer Scorer
 }
@@ -38,7 +38,7 @@ func InitModel() *Model {
 		Affects:       [][][]int{},
 		KnownAffects:  make([]bool, 15),
 
-		TermsCounts:   make([]float32, 0),
+		TermsCounts:   make([]float64, 0),
 	}
 
 	return &model
@@ -63,7 +63,7 @@ func (model *Model) TrainText(text []byte) {
 	var (
 		termsRegex = regexp.MustCompile(`(?m)[\p{L}-]+`)
 		rawTermsB = termsRegex.FindAll(text, -1)
-		terms = map[string]float32{}
+		terms = map[string]float64{}
 	)
 	for _, termB := range rawTermsB {
 		if utf8.RuneCount(termB) < DefaultMinTermLen {
@@ -92,7 +92,7 @@ func (model *Model) TrainTerms(terms []string) {
 /**
 	Add one term to the model
  */
-func (model *Model) AddTerm(term string, count float32) bool {
+func (model *Model) AddTerm(term string, count float64) bool {
 	var (
 		termLen    = utf8.RuneCountInString(term)
 		ok         = false
@@ -220,11 +220,12 @@ func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bo
 	// todo add min input len check
 
 	// exact match
-	if _, ok := model.TermsDict[input]; ok {
+	if termIndex, ok := model.TermsDict[input]; ok {
 		result[input] = Suggestion{
 			Term:     input,
 			Distance: 0,
 			Score:    0,
+			Count:    model.TermsCounts[termIndex],
 		}
 	}
 
@@ -279,6 +280,7 @@ func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bo
 						Distance:     distance,
 						Prescription: editorialPrescription,
 						Score:        0,
+						Count:    model.TermsCounts[termIndex],
 					}
 				}
 			}

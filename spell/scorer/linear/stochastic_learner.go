@@ -3,19 +3,20 @@ package linear
 import (
 	"fmt"
 	"spell"
+	"spell/scorer"
 )
 
 type vectorScore struct {
-	*Vector
+	*scorer.Vector
 	score float64
 
 }
 
-type StochasticLearner struct {
-	*Vectoriser
+type Learner struct {
+	*scorer.Vectoriser
 }
 
-func (learner *StochasticLearner) Learn(learningData []*spell.LearningTerm) spell.ScoreModel {
+func (learner *Learner) Learn(learningData []*spell.LearningTerm) spell.ScoreModel {
 	vectorSystems := make([]*VectorSystem, 0, len(learningData))
 	for _, learningTerm := range learningData {
 		vectorSystem := learner.GetVectorSystem(learningTerm)
@@ -25,11 +26,11 @@ func (learner *StochasticLearner) Learn(learningData []*spell.LearningTerm) spel
 	}
 
 	fmt.Println(len(vectorSystems))
-	var bestVector *Vector
+	var bestVector *scorer.Vector
 	if len(vectorSystems) > 0 && vectorSystems[0] != nil &&
 		len(vectorSystems[0].Vectors) > 0 && vectorSystems[0].Vectors[0] != nil {
 		var (
-			vector               *Vector
+			vector               *scorer.Vector
 			tries                = 100
 			maxRelaxCount        = 10
 			relaxingCount        = 0
@@ -39,7 +40,7 @@ func (learner *StochasticLearner) Learn(learningData []*spell.LearningTerm) spel
 		)
 		tries_loop:
 		for i := 0; i < tries; i++ {
-			vector = RandomVector(vectorSystems[0].Vectors[0].Len())
+			vector = scorer.RandomVector(vectorSystems[0].Vectors[0].Len())
 			currentScore := learner.score(vectorSystems, vector)
 			fmt.Println(i)
 			for k := 0; k < maxDirectSearchCount; k++ {
@@ -91,13 +92,13 @@ func (learner *StochasticLearner) Learn(learningData []*spell.LearningTerm) spel
 			prevBestScore = bestScore
 		}
 	}
-	return &LinearScoreModel{
+	return &ScoreModel{
 		Weights:    bestVector,
-		Vectoriser: InitVectoriser(),
+		Vectoriser: scorer.InitVectoriser(),
 	}
 }
 
-func (learner *StochasticLearner) score(vectorSystems []*VectorSystem, vector *Vector) int {
+func (learner *Learner) score(vectorSystems []*VectorSystem, vector *scorer.Vector) int {
 	currentScore := 0
 	for _, vectorSystem := range vectorSystems {
 		if vectorSystem.IsSatisfied(vector) {
@@ -108,8 +109,8 @@ func (learner *StochasticLearner) score(vectorSystems []*VectorSystem, vector *V
 }
 
 
-func (learner *StochasticLearner) GetVectorSystem(a *spell.LearningTerm) *VectorSystem {
-	baseVector := (*Vector)(nil)
+func (learner *Learner) GetVectorSystem(a *spell.LearningTerm) *VectorSystem {
+	baseVector := (*scorer.Vector)(nil)
 	for _, suggestion := range a.Suggestions {
 		if suggestion.Term == a.Term {
 			baseVector = learner.Vectorize(suggestion.Prescription)
