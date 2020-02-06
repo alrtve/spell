@@ -2,8 +2,10 @@ package spell
 
 import (
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"unicode/utf8"
 )
 
@@ -11,8 +13,8 @@ import (
 	Model represents misspell corrector structure
  */
 type Model struct {
-	TermsDict map[string]int
 	Terms     []string
+	TermsDict map[string]int
 	Index     map[string][][]int
 	IndexTail map[string]map[string]bool
 
@@ -24,7 +26,10 @@ type Model struct {
 	TermsCounts []float64
 	TotalTerms  float64
 
-	scorer Scorer
+	distanceMeasurers  []*DistanceMeasurer `binary:"-"`
+	currentMeasurerId  int                 `binary:"-"`
+	measurersSemaphore chan bool           `binary:"-"`
+	measurersMutex     sync.Mutex          `binary:"-"`
 }
 
 func InitModel() *Model {
@@ -33,15 +38,29 @@ func InitModel() *Model {
 		TermsDict:     map[string]int{},
 		Index:         map[string][][]int{},
 		IndexTail:     map[string]map[string]bool{},
-		Depth:         2,
-		IndexSplitLen: DefaultIndexSplitLen,
+
 		Affects:       [][][]int{},
 		KnownAffects:  make([]bool, 15),
+
+		Depth:         2,
+		IndexSplitLen: DefaultIndexSplitLen,
 
 		TermsCounts:   make([]float64, 0),
 	}
 
+	model.InitMeasurers()
 	return &model
+}
+
+func (model *Model) InitMeasurers()  {
+	procCount := runtime.GOMAXPROCS(-1)
+	model.distanceMeasurers = make([]*DistanceMeasurer, procCount)
+	for i := 0; i < procCount; i++ {
+		model.distanceMeasurers[i] = NewDistanceMeasurer()
+	}
+	model.currentMeasurerId = 0
+	model.measurersSemaphore = make(chan bool, procCount)
+	model.measurersMutex = sync.Mutex{}
 }
 
 /**
@@ -50,10 +69,6 @@ func InitModel() *Model {
 func (model *Model) HasTerm(term string) bool {
 	_, ok := model.TermsDict[strings.ToLower(term)]
 	return ok
-}
-
-func (model *Model) SetScorer(scorer Scorer)  {
-	model.scorer = scorer
 }
 
 /**
@@ -75,7 +90,9 @@ func (model *Model) TrainText(text []byte) {
 	}
 
 	for term, count := range terms {
-		model.AddTerm(term, count)
+		if count >= DefaultMinTermCount {
+			model.AddTerm(term, count)
+		}
 	}
 }
 
@@ -214,7 +231,6 @@ func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bo
 		inputAffects [][]int
 		editAffects  []int
 		term         string
-		measurer     = NewDistanceMeasurer()
 	)
 
 	// todo add min input len check
@@ -270,7 +286,18 @@ func (model *Model) GetRawSuggestions(input string, calcEditorialPrescription bo
 
 			for _, termIndex := range termsIndex {
 				term = model.Terms[termIndex]
+
+				model.measurersSemaphore <- true
+				model.measurersMutex.Lock()
+				model.currentMeasurerId++
+				if model.currentMeasurerId == len(model.distanceMeasurers) {
+					model.currentMeasurerId = 0
+				}
+				measurer := model.distanceMeasurers[model.currentMeasurerId]
+				model.measurersMutex.Unlock()
 				distance, editorialPrescription := measurer.Distance(term, input, calcEditorialPrescription)
+				<- model.measurersSemaphore
+
 				if distance > model.Depth {
 					continue
 				}
@@ -322,29 +349,6 @@ func (model *Model) splitEdit(edit string) (string, string) {
 		editTail = string(editR[model.IndexSplitLen:])
 	}
 	return editHead, editTail
-}
-
-func (model *Model) Learn(misspells []Misspell) {
-	learningData := make([]LearningTerm, 0, 4 * len(misspells))
-	for _, misspell := range misspells {
-		if !model.HasTerm(misspell.Term) {
-			continue
-		}
-		for _, misspelledTerm := range misspell.Misspells{
-			rawSuggesions := model.GetRawSuggestions(misspelledTerm, true)
-			suggestions := make([]Suggestion, 0, len(rawSuggesions))
-			for _, suggestion := range rawSuggesions {
-			    suggestions = append(suggestions, suggestion)
-			}
-			learning := LearningTerm{
-				Term:misspell.Term,
-				Misspell:misspelledTerm,
-				Suggestions:suggestions,
-			}
-			learningData = append(learningData, learning)
-		}
-	}
-	model.scorer.Learn(learningData)
 }
 
 func GetMultiEdits(term string, usedWeight float64, maxWeight float64) map[string]float64 {

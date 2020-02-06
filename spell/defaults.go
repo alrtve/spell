@@ -28,4 +28,5 @@ const (
 	DefaultMinSpanningLen = 3.0
 	DefaultIndexSplitLen  = 5
 	DefaultMinTermLen = 4
+	DefaultMinTermCount = 10
 )

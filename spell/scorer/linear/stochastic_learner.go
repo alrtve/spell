@@ -9,23 +9,32 @@ import (
 type vectorScore struct {
 	*scorer.Vector
 	score float64
+}
 
+
+type LearnProgress struct {
+	VectorSystemsCount int
+	Step               int
+	BestScore          int
+	RelaxingCount      int
 }
 
 type Learner struct {
 	*scorer.Vectoriser
+	learnProgress LearnProgress
 }
 
 func (learner *Learner) Learn(learningData []*spell.LearningTerm) spell.ScoreModel {
+	learner.learnProgress = LearnProgress{}
 	vectorSystems := make([]*VectorSystem, 0, len(learningData))
 	for _, learningTerm := range learningData {
-		vectorSystem := learner.GetVectorSystem(learningTerm)
+		vectorSystem := learner.vectorSystem(learningTerm)
 		if vectorSystem != nil {
 			vectorSystems = append(vectorSystems, vectorSystem)
 		}
 	}
+	learner.learnProgress.VectorSystemsCount = len(vectorSystems)
 
-	fmt.Println(len(vectorSystems))
 	var bestVector *scorer.Vector
 	if len(vectorSystems) > 0 && vectorSystems[0] != nil &&
 		len(vectorSystems[0].Vectors) > 0 && vectorSystems[0].Vectors[0] != nil {
@@ -38,11 +47,11 @@ func (learner *Learner) Learn(learningData []*spell.LearningTerm) spell.ScoreMod
 			bestScore            = 0
 			prevBestScore        = 0
 		)
-		tries_loop:
+		triesLoop:
 		for i := 0; i < tries; i++ {
+			learner.learnProgress.Step = i + 1
 			vector = scorer.RandomVector(vectorSystems[0].Vectors[0].Len())
 			currentScore := learner.score(vectorSystems, vector)
-			fmt.Println(i)
 			for k := 0; k < maxDirectSearchCount; k++ {
 				vVectors := vector.Variate(0, 1, 0.1)
 				valuableVectors := make([]vectorScore, 0, len(vVectors))
@@ -72,21 +81,19 @@ func (learner *Learner) Learn(learningData []*spell.LearningTerm) spell.ScoreMod
 					break
 				}
 
-				fmt.Println(currentScore)
-				fmt.Println(bestScore)
-				fmt.Println("")
 				if currentScore > bestScore {
-					fmt.Println(bestScore)
 					bestScore = currentScore
 					bestVector = vector
+					learner.learnProgress.BestScore = bestScore
 				}
 			}
 			if bestScore > prevBestScore {
 				relaxingCount = 0
 			} else {
 				relaxingCount++
+				learner.learnProgress.RelaxingCount = relaxingCount
 				if relaxingCount == maxRelaxCount {
-					break tries_loop
+					break triesLoop
 				}
 			}
 			prevBestScore = bestScore
@@ -97,6 +104,12 @@ func (learner *Learner) Learn(learningData []*spell.LearningTerm) spell.ScoreMod
 		Vectoriser: scorer.InitVectoriser(),
 	}
 }
+
+func (learner *Learner) LearnProgress() string {
+	learnProgress := learner.learnProgress;
+	return fmt.Sprintf("Step %d. Best score: %d. VS count: %d. Relaxing Count: %d", learnProgress.Step, learnProgress.BestScore, learnProgress.VectorSystemsCount, learnProgress.RelaxingCount)
+}
+
 
 func (learner *Learner) score(vectorSystems []*VectorSystem, vector *scorer.Vector) int {
 	currentScore := 0
@@ -109,7 +122,7 @@ func (learner *Learner) score(vectorSystems []*VectorSystem, vector *scorer.Vect
 }
 
 
-func (learner *Learner) GetVectorSystem(a *spell.LearningTerm) *VectorSystem {
+func (learner *Learner) vectorSystem(a *spell.LearningTerm) *VectorSystem {
 	baseVector := (*scorer.Vector)(nil)
 	for _, suggestion := range a.Suggestions {
 		if suggestion.Term == a.Term {

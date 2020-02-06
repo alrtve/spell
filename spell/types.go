@@ -59,6 +59,10 @@ type Scorer interface {
 	Learn(learningData []LearningTerm)
 }
 
+type LearnProgressor interface {
+	LearnProgress() string
+}
+
 type ScoreModel interface {
 	Compare(a *Suggestion, b *Suggestion) float64
 }

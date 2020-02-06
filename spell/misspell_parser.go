@@ -9,7 +9,7 @@ import (
 type MisspellParser struct {
 }
 
-func InitMisspellParser() *MisspellParser {
+func NewMisspellParser() *MisspellParser {
 	return &MisspellParser{}
 }
 

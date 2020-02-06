@@ -1,19 +1,23 @@
 package probabilistic
 
 import (
+	"fmt"
 	"spell"
 	"spell/scorer"
 )
 
-type Learner struct {
-	*scorer.Vectoriser
+type LearnProgress struct {
+	ProcessedTerms int
 }
 
-func InitLearner(vectoriser *scorer.Vectoriser) *Learner {
-	return &Learner{vectoriser}
+
+type Learner struct {
+	*scorer.Vectoriser
+	learnProgress LearnProgress
 }
 
 func (learner *Learner) Learn(learningData []*spell.LearningTerm) spell.ScoreModel {
+	learner.learnProgress = LearnProgress{}
 	var weights *scorer.Vector = nil
 	for _, learningTerm := range learningData {
 		for _, suggestion := range learningTerm.Suggestions{
@@ -34,8 +38,14 @@ func (learner *Learner) Learn(learningData []*spell.LearningTerm) spell.ScoreMod
 	for i := range weights.Xs {
 		weights.Xs[i] /= totalW
 	}
+	learner.learnProgress.ProcessedTerms = len(learningData)
 	return &ScoreModel{
 		Weights:    weights,
 		Vectoriser: learner.Vectoriser,
 	}
+}
+
+func (learner *Learner) LearnProgress() string {
+	learnProgress := learner.learnProgress;
+	return fmt.Sprintf("Processed terms: %d", learnProgress.ProcessedTerms)
 }
