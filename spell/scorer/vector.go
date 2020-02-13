@@ -57,22 +57,6 @@ func (a *Vector) EqualTo(b *Vector) bool {
 	return true
 }
 
-func (a *Vector) Vector(initialValue float64) *Vector {
-	result := InitVector(len(a.Xs))
-	for i := range a.Xs {
-		result.Xs[i] = initialValue
-	}
-	return result
-}
-
-func (a *Vector) RandomVector() *Vector {
-	result := InitVector(len(a.Xs))
-	for i := range a.Xs {
-		result.Xs[i] = rand.Float64()
-	}
-	return result
-}
-
 func (a *Vector) Clone() *Vector {
 	result := InitVector(len(a.Xs))
 	for i, xs := range a.Xs {
@@ -84,15 +68,6 @@ func (a *Vector) Clone() *Vector {
 func (a *Vector) IsZero() bool {
 	for _, val := range a.Xs {
 		if math.Abs(val) > eps {
-			return false
-		}
-	}
-	return true
-}
-
-func (a *Vector) IsSimple() bool {
-	for _, val := range a.Xs {
-		if math.Abs(val) > 1+eps {
 			return false
 		}
 	}
@@ -112,18 +87,6 @@ func (a *Vector) Variate(min, max, d float64) []*Vector {
 		if v.Xs[i] >= min {
 			result = append(result, v)
 		}
-	}
-	return result
-}
-
-func (a *Vector) CombineWith(vectors ...*Vector) *Vector {
-	result := a.Clone()
-	for i := range a.Xs {
-		d := 0.0
-		for _, v := range vectors {
-			d += v.Xs[i] - a.Xs[i]
-		}
-		result.Xs[i] = a.Xs[i] + d
 	}
 	return result
 }
@@ -158,31 +121,6 @@ func (inequality *Vector) Dump() {
 	}
 }
 
-// goodness
-func (a *Vector) Gn(vector *Vector) (float64, bool) {
-	val := 0.0
-	significantCount := 0
-	minVal := 1.0
-	for i, xs := range a.Xs {
-		val += xs * vector.Xs[i]
-		if math.Abs(xs) < eps {
-			significantCount += 1
-		} else {
-			minVal = math.Min(minVal, math.Abs(xs))
-		}
-	}
-	if significantCount <= 1 {
-		return 1, false
-	}
-	if math.Abs(val) < eps {
-		return 1, true
-	}
-	if val > 0 {
-		return 1 / (1 + val/minVal), true
-	}
-	return 1 - val/minVal/5, true
-}
-
 func (a *Vector) IsSatisfied(wights *Vector) bool {
 	val := 0.0
 	for i := range a.Xs {
@@ -191,7 +129,7 @@ func (a *Vector) IsSatisfied(wights *Vector) bool {
 	return val > 0
 }
 
-func (a *Vector) Value(wights *Vector) float64 {
+func (a *Vector) ScalarMul(wights *Vector) float64 {
 	val := 0.0
 	for i := range a.Xs {
 		val += wights.Xs[i] * a.Xs[i]

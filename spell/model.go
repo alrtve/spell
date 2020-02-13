@@ -324,13 +324,11 @@ func (model *Model) GetSuggestions(input string, scoreModel ScoreModel, calcEdit
 	var rawSuggestions = model.GetRawSuggestions(input, calcEditorialPrescription)
 	suggestions := make([]Suggestion, 0, len(rawSuggestions))
 	for _, suggestion := range rawSuggestions {
+		suggestion.Score = scoreModel.Score(&suggestion)
 		suggestions = append(suggestions, suggestion)
 	}
 	sort.Slice(suggestions, func(i, j int) bool {
-		if scoreModel.Compare(&suggestions[i], &suggestions[j]) < 0 {
-			return true
-		}
-		return false
+		return suggestions[i].Score < suggestions[j].Score
 	})
 	return suggestions
 }

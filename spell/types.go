@@ -64,6 +64,7 @@ type LearnProgressor interface {
 }
 
 type ScoreModel interface {
+	Score (a *Suggestion) float64
 	Compare(a *Suggestion, b *Suggestion) float64
 }
 

@@ -99,7 +99,7 @@ func (learner *Learner) Learn(learningData []*spell.LearningTerm) spell.ScoreMod
 			prevBestScore = bestScore
 		}
 	}
-	return &ScoreModel{
+	return &Scorer{
 		Weights:    bestVector,
 		Vectoriser: scorer.InitVectoriser(),
 	}

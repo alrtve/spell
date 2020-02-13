@@ -43,15 +43,6 @@ func (system *VectorSystem) Normalize() {
 	system.Vectors = inequalities
 }
 
-func (system *VectorSystem) IsSimple() bool {
-	for _, inequality := range system.Vectors {
-		if !inequality.IsSimple() {
-			return false
-		}
-	}
-	return true
-}
-
 func (system *VectorSystem) Dump() {
 	for _, inequality := range system.Vectors {
 		displayValues := make([]string, 0, 20)
@@ -76,19 +67,6 @@ func (system *VectorSystem) Dump() {
 	}
 }
 
-func (system *VectorSystem) Gn(vector *scorer.Vector) float64 {
-	min, resultApplicable := -1000.0, false
-	for i := 0; i < len(system.Vectors); i++ {
-		val, applicable := system.Vectors[i].Gn(vector)
-		min = math.Max(min, val)
-		resultApplicable = resultApplicable || applicable
-	}
-	if resultApplicable {
-		return min
-	}
-	return 2
-}
-
 func (system *VectorSystem) IsSatisfied(vector *scorer.Vector) bool {
 	for _, inequality := range system.Vectors {
 		if !inequality.IsSatisfied(vector) {
@@ -96,22 +74,4 @@ func (system *VectorSystem) IsSatisfied(vector *scorer.Vector) bool {
 		}
 	}
 	return true
-}
-
-func (system *VectorSystem) Compare(a *scorer.Vector, b *scorer.Vector) int {
-	result := 0.0
-	for i := 0; i < len(system.Vectors); i++ {
-		aVal, aApplicable := system.Vectors[i].Gn(a)
-		bVal, bApplicable := system.Vectors[i].Gn(b)
-		if aApplicable && bApplicable {
-			result += aVal - bVal
-		}
-	}
-	if math.Abs(result) < eps {
-		return 0
-	}
-	if result < 0 {
-		return -1
-	}
-	return 1
 }

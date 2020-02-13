@@ -39,7 +39,7 @@ func (learner *Learner) Learn(learningData []*spell.LearningTerm) spell.ScoreMod
 		weights.Xs[i] /= totalW
 	}
 	learner.learnProgress.ProcessedTerms = len(learningData)
-	return &ScoreModel{
+	return &Scorer{
 		Weights:    weights,
 		Vectoriser: learner.Vectoriser,
 	}
